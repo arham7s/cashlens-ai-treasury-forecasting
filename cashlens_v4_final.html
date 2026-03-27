@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CashLens · Treasury Intelligence Platform</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Serif:ital,wght@0,400;1,300&display=swap" rel="stylesheet">
+<style>
+/* ─── TOKENS ─────────────────────────────────────────── */
+:root{
+  --bg:      #07080a;
+  --s0:      #0c1018;
+  --s1:      #101520;
+  --s2:      #171e2c;
+  --bd:      rgba(255,255,255,0.06);
+  --bd2:     rgba(255,255,255,0.12);
+  --tx:      #e2eaff;
+  --tx2:     #7888aa;
+  --tx3:     #38486a;
+
+  /* Vivid neon palette */
+  --green:   #00ffaa;
+  --green2:  #00cc88;
+  --blue:    #38beff;
+  --blue2:   #0ea5e9;
+  --amber:   #ffb800;
+  --amber2:  #f59e0b;
+  --red:     #ff3366;
+  --red2:    #f43f5e;
+  --violet:  #bf7fff;
+  --violet2: #a855f7;
+  --cyan:    #00e5ff;
+
+  /* Glow shadows */
+  --glow-g:  0 0 20px rgba(0,255,170,0.4),0 0 40px rgba(0,255,170,0.15);
+  --glow-b:  0 0 20px rgba(56,190,255,0.4),0 0 40px rgba(56,190,255,0.15);
+  --glow-a:  0 0 20px rgba(255,184,0,0.4), 0 0 40px rgba(255,184,0,0.15);
+  --glow-r:  0 0 20px rgba(255,51,102,0.4),0 0 40px rgba(255,51,102,0.15);
+  --glow-v:  0 0 20px rgba(191,127,255,0.4),0 0 40px rgba(191,127,255,0.15);
+
+  --nav:     200px;
+  --hdr:     48px;
+  --sans:   'IBM Plex Sans', sans-serif;
+  --mono:   'IBM Plex Mono', monospace;
+  --serif:  'IBM Plex Serif', serif;
+  --r4:4px;--r6:6px;--r8:8px;--r10:10px;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--sans);font-size:12px;line-height:1.5;
+  background:var(--bg);color:var(--tx);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:var(--s2);border-radius:2px}
+
+/* ─── BACKGROUND ─────────────────────────────────────── */
+.grid-bg{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.012) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.012) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+.glow-bg{
+  position:fixed;right:-10%;top:-20%;
+  width:600px;height:600px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,255,170,0.06) 0%,rgba(56,190,255,0.02) 40%,transparent 70%);
+  pointer-events:none;z-index:0;
+  animation:gf 14s ease-in-out infinite;
+}
+.glow-bg2{
+  position:fixed;left:-5%;bottom:-10%;
+  width:400px;height:400px;border-radius:50%;
+  background:radial-gradient(circle,rgba(191,127,255,0.05) 0%,transparent 65%);
+  pointer-events:none;z-index:0;
+  animation:gf 18s ease-in-out infinite reverse;
+}
+@keyframes gf{0%,100%{transform:translate(0,0)}50%{transform:translate(-30px,25px)}}
+
+/* ─── SHELL ─────────────────────────────────────────── */
+.shell{position:relative;z-index:1;display:flex;height:100vh;overflow:hidden}
+
+/* ─── SIDEBAR ─────────────────────────────────────────── */
+.sidebar{
+  width:var(--nav);flex-shrink:0;
+  background:rgba(12,16,24,0.97);
+  backdrop-filter:blur(24px);
+  border-right:1px solid var(--bd);
+  display:flex;flex-direction:column;
+  overflow:hidden;position:relative;
+}
+/* Subtle scanline shimmer on sidebar */
+.sidebar::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(
+    0deg,
+    transparent,transparent 2px,
+    rgba(0,255,170,0.008) 2px,rgba(0,255,170,0.008) 3px
+  );
+  z-index:0;
+}
+.sb-logo{
+  height:var(--hdr);display:flex;align-items:center;gap:9px;
+  padding:0 16px;border-bottom:1px solid var(--bd);flex-shrink:0;
+}
+.logo-sq{
+  width:26px;height:26px;border-radius:5px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--green),var(--cyan));
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;color:#000;font-family:var(--mono);
+  box-shadow:0 0 14px rgba(0,255,170,0.5),0 0 28px rgba(0,255,170,0.2);
+  animation:logoPulse 3s ease-in-out infinite;
+}
+@keyframes logoPulse{
+  0%,100%{box-shadow:0 0 12px rgba(0,255,170,0.5),0 0 24px rgba(0,255,170,0.15)}
+  50%{box-shadow:0 0 20px rgba(0,255,170,0.8),0 0 40px rgba(0,255,170,0.25)}
+}
+.logo-name{font-size:13px;font-weight:600;letter-spacing:-.2px}
+.logo-name span{color:var(--green)}
+.logo-tag{font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3);margin-left:auto;font-family:var(--mono)}
+
+.sb-section{padding:14px 12px 4px;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3)}
+
+.ni{
+  display:flex;align-items:center;gap:9px;
+  padding:7px 10px;margin:1px 6px;border-radius:var(--r6);
+  cursor:pointer;color:var(--tx2);font-size:12px;font-weight:400;
+  transition:all .15s;position:relative;user-select:none;
+  border:1px solid transparent;
+}
+.ni:hover{color:var(--tx);background:rgba(255,255,255,0.03)}
+.ni.on{color:var(--tx);background:rgba(0,255,170,0.07);border-color:rgba(0,255,170,0.18);box-shadow:inset 0 0 12px rgba(0,255,170,0.04)}
+.ni.on .ni-ico{color:var(--green);filter:drop-shadow(0 0 4px rgba(0,255,170,0.8))}
+.ni-ico{font-size:13px;width:16px;text-align:center;transition:color .15s;color:var(--tx3)}
+.ni-badge{
+  margin-left:auto;font-family:var(--mono);font-size:9px;
+  background:rgba(0,255,170,0.1);color:var(--green);
+  padding:1px 6px;border-radius:10px;font-weight:500;
+  border:1px solid rgba(0,255,170,0.2);
+  text-shadow:0 0 6px rgba(0,255,170,0.5);
+}
+.ni-bar{
+  position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:2px;height:16px;border-radius:0 2px 2px 0;
+  background:var(--green);opacity:0;transition:opacity .15s;
+}
+.ni.on .ni-bar{opacity:1;box-shadow:0 0 8px var(--green)}
+
+.sb-bottom{margin-top:auto;padding:10px;border-top:1px solid var(--bd)}
+.engine-pill{
+  display:flex;align-items:center;gap:7px;padding:8px 10px;
+  border-radius:var(--r6);background:rgba(0,255,170,0.04);
+  border:1px solid rgba(0,255,170,0.15);
+  box-shadow:0 0 16px rgba(0,255,170,0.06);
+}
+.ep-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 8px var(--green),0 0 16px rgba(0,255,170,0.5);flex-shrink:0;
+  animation:ep 2.5s ease-in-out infinite;
+}
+@keyframes ep{0%,100%{opacity:1;box-shadow:0 0 8px var(--green),0 0 16px rgba(0,255,170,0.5)}50%{opacity:0.5;box-shadow:0 0 4px var(--green)}}
+.ep-info{flex:1}
+.ep-label{font-size:10px;font-weight:600;color:var(--tx2);letter-spacing:.02em}
+.ep-sub{font-size:9px;color:var(--tx3);font-family:var(--mono)}
+
+/* ─── TOPBAR ─────────────────────────────────────────── */
+.topbar{
+  height:var(--hdr);flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;background:rgba(7,8,10,0.9);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--bd);
+  box-shadow:0 1px 0 0 rgba(0,255,170,0.06);
+  position:relative;z-index:5;
+}
+.tb-left{display:flex;align-items:center;gap:12px}
+.tb-bc{font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:6px;font-family:var(--mono)}
+.tb-bc span{color:var(--tx2)}
+.tb-right{display:flex;align-items:center;gap:7px}
+.tb-date{font-size:10px;color:var(--tx3);font-family:var(--mono);margin-right:6px}
+
+.btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 11px;border-radius:var(--r6);
+  border:1px solid var(--bd2);background:rgba(255,255,255,0.04);
+  color:var(--tx2);font-size:11px;font-family:var(--sans);font-weight:500;
+  cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.btn:hover{color:var(--tx);background:rgba(255,255,255,0.07);border-color:var(--bd2)}
+.btn-g{background:var(--green);color:#000;border-color:transparent;font-weight:700;
+  box-shadow:0 0 16px rgba(0,255,170,0.4),0 2px 8px rgba(0,0,0,0.3);}
+.btn-g:hover{background:#33ffbb;box-shadow:var(--glow-g);color:#000;transform:translateY(-1px)}
+.btn-pdf{background:rgba(255,51,102,0.08);color:var(--red);border-color:rgba(255,51,102,0.25)}
+.btn-pdf:hover{background:rgba(255,51,102,0.15);color:var(--red);box-shadow:0 0 12px rgba(255,51,102,0.2)}
+
+/* ─── CONTENT ─────────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;min-height:0}
+.content{flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 18px 24px;min-height:0}
+
+/* ─── PAGE ─────────────────────────────────────────── */
+.page{display:none;animation:pi .22s var(--ease)}
+.page.on{display:block}
+@keyframes pi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─── PAGE HEADER ─────────────────────────────────────── */
+.ph{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.ph-l .pt{font-family:var(--serif);font-size:19px;font-weight:300;letter-spacing:-.3px}
+.ph-l .pt em{color:var(--green);font-style:italic}
+.ph-l .ps{font-size:10px;color:var(--tx3);font-family:var(--mono);margin-top:1px}
+.ph-r{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+
+/* ─── SCENARIO BAR ─────────────────────────────────────── */
+.sc-bar{
+  display:flex;gap:3px;padding:3px;
+  background:var(--s0);border:1px solid var(--bd);
+  border-radius:var(--r8);width:fit-content;margin-bottom:12px;
+}
+.sc{
+  padding:4px 12px;border-radius:var(--r6);border:none;
+  background:transparent;color:var(--tx2);font-family:var(--sans);
+  font-size:11px;font-weight:500;cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;gap:5px;
+}
+.sc:hover{color:var(--tx)}
+.sc.on{background:var(--s2);color:var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.4)}
+
+/* ─── KPI ROW ─────────────────────────────────────────── */
+.krow{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:10px}
+@media(max-width:1100px){.krow{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:650px){.krow{grid-template-columns:repeat(2,1fr)}}
+
+.kc{
+  background:var(--s1);border:1px solid var(--bd);
+  border-radius:var(--r8);padding:11px 13px;
+  position:relative;overflow:hidden;cursor:default;
+  transition:border-color .25s,transform .2s var(--ease),box-shadow .25s;
+}
+.kc::before{
+  content:'';position:absolute;top:0;left:20%;right:20%;height:1px;
+  background:linear-gradient(90deg,transparent,var(--kcc,var(--green)),transparent);
+  box-shadow:0 0 10px var(--kcc,var(--green));
+  opacity:0.5;transition:opacity .3s,left .3s,right .3s;
+}
+.kc:hover{
+  border-color:rgba(255,255,255,0.12);
+  transform:translateY(-2px);
+  box-shadow:0 8px 28px rgba(0,0,0,0.5);
+}
+.kc:hover::before{opacity:1;left:0%;right:0%}
+
+.kl{font-size:9px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--tx3);margin-bottom:5px}
+.kv{font-family:var(--mono);font-size:17px;font-weight:400;color:var(--tx);letter-spacing:-.5px;line-height:1}
+.kd{font-size:10px;margin-top:5px;display:flex;align-items:center;gap:3px}
+.ku{color:var(--green);text-shadow:0 0 8px rgba(0,255,170,0.6)}.kdn{color:var(--red);text-shadow:0 0 8px rgba(255,51,102,0.6)}
+
+/* ─── GRID LAYOUTS ─────────────────────────────────────── */
+.g2{display:grid;grid-template-columns:1.8fr 1fr;gap:9px;margin-bottom:9px}
+.g2e{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:9px}
+@media(max-width:960px){.g2,.g2e,.g3{grid-template-columns:1fr}}
+
+/* ─── CARD ─────────────────────────────────────────────── */
+.card{
+  background:var(--s1);border:1px solid var(--bd);
+  border-radius:var(--r10);padding:13px 15px;
+  transition:border-color .2s,box-shadow .25s;position:relative;overflow:hidden;
+}
+.card:hover{border-color:rgba(255,255,255,0.1);box-shadow:0 4px 24px rgba(0,0,0,0.4)}
+
+.ch{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:8px}
+.ct{font-size:12px;font-weight:600;color:var(--tx);letter-spacing:-.1px}
+.cs{font-size:10px;color:var(--tx3);margin-top:1px;font-family:var(--mono)}
+.ca{display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap}
+
+.chip{
+  padding:3px 8px;border-radius:20px;
+  background:rgba(255,255,255,0.03);border:1px solid var(--bd);
+  font-size:10px;font-weight:500;font-family:var(--mono);
+  color:var(--tx3);cursor:pointer;transition:all .12s;
+}
+.chip:hover{color:var(--tx);border-color:var(--bd2)}
+.chip.on{background:rgba(0,255,170,0.08);border-color:rgba(0,255,170,0.35);color:var(--green);text-shadow:0 0 8px rgba(0,255,170,0.5)}
+
+/* tight canvas wrapper — KEY FIX for empty space */
+.cw{position:relative;width:100%;overflow:hidden}
+.cw canvas{display:block;width:100%!important;max-height:300px}
+/* Doughnut specifically needs a constrained square container */
+.cw-donut{position:relative;width:100%;max-width:240px;margin:0 auto}
+.cw-donut canvas{display:block;width:100%!important}
+
+/* ─── DIVIDER ─────────────────────────────────────────── */
+.div{height:1px;background:var(--bd);margin:10px 0}
+
+/* ─── TABLE ─────────────────────────────────────────── */
+.tw{overflow-x:auto;border-radius:0 0 var(--r8) var(--r8)}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{
+  padding:6px 11px;text-align:left;
+  font-size:9px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--tx3);border-bottom:1px solid var(--bd);white-space:nowrap;
+  font-family:var(--mono);
+}
+.tbl td{
+  padding:7px 11px;border-bottom:1px solid rgba(255,255,255,0.025);
+  font-family:var(--mono);font-size:11px;
+}
+.tbl tr:hover td{background:rgba(255,255,255,0.012)}
+.tbl tr:last-child td{border-bottom:none}
+
+.badge{
+  display:inline-flex;align-items:center;
+  padding:2px 7px;border-radius:10px;
+  font-size:9px;font-weight:700;letter-spacing:.04em;
+}
+.bg{background:rgba(0,255,170,0.09);color:var(--green);border:1px solid rgba(0,255,170,0.22)}
+.bb{background:rgba(56,190,255,0.09);color:var(--blue);border:1px solid rgba(56,190,255,0.22)}
+.br{background:rgba(255,51,102,0.09);color:var(--red);border:1px solid rgba(255,51,102,0.22)}
+.bo{background:rgba(255,184,0,0.09);color:var(--amber);border:1px solid rgba(255,184,0,0.22)}
+
+/* ─── MODEL CARDS ─────────────────────────────────────── */
+.mrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+@media(max-width:850px){.mrow{grid-template-columns:repeat(2,1fr)}}
+
+.mc{
+  background:var(--s1);border:1px solid var(--bd);
+  border-radius:var(--r8);padding:13px 14px;
+  transition:all .2s var(--ease);cursor:default;position:relative;overflow:hidden;
+}
+.mc.best{border-color:rgba(0,255,170,0.3);background:rgba(0,255,170,0.025);box-shadow:0 0 20px rgba(0,255,170,0.06),inset 0 0 20px rgba(0,255,170,0.02)}
+.mc:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.4)}
+.mc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.mn{font-size:11px;font-weight:600;display:flex;align-items:center;gap:7px}
+.mdot{width:7px;height:7px;border-radius:50%}
+.mbest{font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:10px;background:rgba(0,255,170,0.1);color:var(--green);border:1px solid rgba(0,255,170,0.25);text-shadow:0 0 6px rgba(0,255,170,0.5)}
+.mr{display:flex;justify-content:space-between;margin-bottom:5px}
+.mk{font-size:9px;color:var(--tx3);font-family:var(--mono)}
+.mv{font-family:var(--mono);font-size:11px;color:var(--tx)}
+.mbar{height:2px;background:rgba(255,255,255,0.04);border-radius:2px;margin-top:10px}
+.mfill{height:100%;border-radius:2px;transition:width 1.1s var(--ease)}
+
+/* ─── CONFIGURE ─────────────────────────────────────────── */
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:600px){.cg{grid-template-columns:1fr}}
+.fl{display:block;font-size:9px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--tx3);margin-bottom:5px}
+.fc{
+  width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--bd);
+  border-radius:var(--r6);padding:7px 30px 7px 10px;color:var(--tx);
+  font-family:var(--sans);font-size:12px;outline:none;
+  transition:border-color .15s;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%233d4d68' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;cursor:pointer;
+}
+.fc:focus{border-color:rgba(0,255,170,0.4);box-shadow:0 0 0 2px rgba(0,255,170,0.06)}
+.fc option{background:#141920}
+
+/* ─── DROP ZONE ─────────────────────────────────────────── */
+.dz{
+  border:1.5px dashed var(--bd);border-radius:var(--r10);
+  padding:32px 24px;text-align:center;cursor:pointer;
+  margin-bottom:12px;transition:all .2s;position:relative;overflow:hidden;
+}
+.dz:hover{border-color:rgba(0,255,170,0.35);background:rgba(0,255,170,0.02);box-shadow:0 0 24px rgba(0,255,170,0.04) inset}
+.dz-icon{font-size:24px;margin-bottom:8px;display:block}
+.dz-t{font-size:13px;font-weight:600;margin-bottom:4px}
+.dz-s{font-size:10px;color:var(--tx3);line-height:1.6}
+
+/* ─── NOTICE ─────────────────────────────────────────── */
+.notice{
+  background:rgba(255,184,0,0.04);border:1px solid rgba(255,184,0,0.18);
+  border-radius:var(--r8);padding:10px 13px;
+  display:flex;align-items:flex-start;gap:9px;
+  margin-bottom:10px;font-size:11px;line-height:1.6;color:var(--tx2);
+}
+.notice strong{color:var(--tx);font-weight:600}
+.notice code{font-family:var(--mono);font-size:10px;background:rgba(255,255,255,0.05);padding:1px 5px;border-radius:3px}
+
+/* ─── PIPELINE ─────────────────────────────────────────── */
+.pipe{display:flex;align-items:center;overflow-x:auto;padding:4px 0;gap:0}
+.ps{display:flex;align-items:center;flex-shrink:0}
+.pn{
+  background:var(--s2);border:1px solid var(--bd);border-radius:var(--r8);
+  padding:10px 14px;text-align:center;min-width:100px;
+  transition:all .18s;cursor:default;
+}
+.pn:hover{border-color:var(--bd2);transform:translateY(-1px)}
+.pn.hi{border-color:rgba(0,255,170,0.3);background:rgba(0,255,170,0.05);box-shadow:0 0 16px rgba(0,255,170,0.08)}
+.pi-ico{font-size:16px;margin-bottom:4px}
+.pn-name{font-size:10px;font-weight:600;color:var(--tx);margin-bottom:2px}
+.pn-desc{font-size:9px;color:var(--tx3);line-height:1.4}
+.pa{padding:0 6px;color:var(--tx3);font-size:12px}
+
+/* ─── SECTION LABEL ─────────────────────────────────────── */
+.sl{font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin-bottom:8px;margin-top:4px;display:flex;align-items:center;gap:8px}
+.sl::after{content:'';flex:1;height:1px;background:var(--bd)}
+
+/* ─── LOADING OVERLAY ─────────────────────────────────────── */
+#ov{
+  position:fixed;inset:0;z-index:1000;
+  background:rgba(8,9,11,0.92);backdrop-filter:blur(16px);
+  display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+}
+#ov.show{display:flex}
+.ov-ring{
+  width:40px;height:40px;border-radius:50%;
+  border:2px solid var(--s2);border-top-color:var(--green);
+  animation:spin .7s linear infinite;margin-bottom:12px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ov-steps{list-style:none;margin-top:8px}
+.ovs{font-family:var(--mono);font-size:11px;color:var(--tx3);padding:3px 0;display:flex;align-items:center;gap:7px;transition:color .15s}
+.ovs.done{color:var(--green)}.ovs.act{color:var(--tx)}
+.ovs-d{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.ov-t{font-family:var(--mono);font-size:12px;color:var(--tx2)}
+
+/* ─── PDF TOAST ─────────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:20px;right:20px;z-index:2000;
+  background:var(--s2);border:1px solid var(--bd2);
+  border-radius:var(--r8);padding:11px 16px;
+  font-size:12px;display:none;align-items:center;gap:9px;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+  animation:toastIn .25s var(--ease);
+}
+#toast.show{display:flex}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.toast-icon{font-size:16px}
+
+/* ─── MOBILE ─────────────────────────────────────────── */
+.mob-btn{display:none;background:none;border:none;color:var(--tx);font-size:16px;cursor:pointer;padding:4px}
+#mbd{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:199}
+#mbd.show{display:block}
+@media(max-width:768px){
+  .mob-btn{display:block}
+  .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:200;transform:translateX(-100%);transition:transform .25s var(--ease)}
+  .sidebar.open{transform:translateX(0)}
+  .content{padding:12px}
+  .krow{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="grid-bg" aria-hidden="true"></div>
+<div class="glow-bg" aria-hidden="true"></div>
+<div class="glow-bg2" aria-hidden="true"></div>
+<div id="mbd" onclick="closeSb()"></div>
+
+<!-- OVERLAY -->
+<div id="ov" role="status">
+  <div class="ov-ring"></div>
+  <div class="ov-t" id="ovT">Initialising engine…</div>
+  <ul class="ov-steps" id="ovList"></ul>
+</div>
+
+<!-- TOAST -->
+<div id="toast">
+  <span class="toast-icon" id="toastIcon">⏳</span>
+  <span id="toastMsg">Generating PDF report…</span>
+</div>
+
+<div class="shell">
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar" id="sb">
+  <div class="sb-logo">
+    <div class="logo-sq">C</div>
+    <div class="logo-name">Cash<span>Lens</span></div>
+    <div class="logo-tag">v3</div>
+  </div>
+
+  <div class="sb-section">Analytics</div>
+  <div class="ni on" onclick="nav(this,'dashboard')" tabindex="0" role="button" aria-current="page">
+    <div class="ni-bar"></div>
+    <span class="ni-ico">▤</span> Dashboard
+    <span class="ni-badge">Live</span>
+  </div>
+  <div class="ni" onclick="nav(this,'forecast')" tabindex="0" role="button">
+    <div class="ni-bar"></div>
+    <span class="ni-ico">◈</span> Forecast
+  </div>
+  <div class="ni" onclick="nav(this,'models')" tabindex="0" role="button">
+    <div class="ni-bar"></div>
+    <span class="ni-ico">◉</span> Models
+  </div>
+
+  <div class="sb-section">System</div>
+  <div class="ni" onclick="nav(this,'configure')" tabindex="0" role="button">
+    <div class="ni-bar"></div>
+    <span class="ni-ico">⊞</span> Configure
+  </div>
+
+  <div class="sb-bottom">
+    <div class="engine-pill">
+      <div class="ep-dot"></div>
+      <div class="ep-info">
+        <div class="ep-label">Engine Active</div>
+        <div class="ep-sub">MAPE 3.2% · 90D horizon</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+  <header class="topbar">
+    <div class="tb-left">
+      <button class="mob-btn" onclick="toggleSb()" aria-label="Menu">☰</button>
+      <div class="tb-bc">CashLens <span>›</span> <span id="pTitle">Dashboard</span></div>
+    </div>
+    <div class="tb-right">
+      <div class="tb-date" id="tbDate"></div>
+      <button class="btn" onclick="exportPDF()" aria-label="Export PDF report">
+        ⬇ PDF Report
+      </button>
+      <button class="btn btn-g" onclick="runEngine()" aria-label="Run forecast engine">
+        ▶ Run Engine
+      </button>
+    </div>
+  </header>
+
+  <main class="content" id="ct">
+
+    <!-- ══ PAGE: DASHBOARD ══ -->
+    <div class="page on" id="page-dashboard">
+
+      <div class="ph">
+        <div class="ph-l">
+          <div class="pt">Treasury <em>Intelligence</em></div>
+          <div class="ps">FY 2024 · SME Edition · Hybrid AI Ensemble · Synthetic Demo Data</div>
+        </div>
+        <div class="ph-r">
+          <div class="sc-bar">
+            <button class="sc on" onclick="setSc(this,'base')">📊 Base</button>
+            <button class="sc" onclick="setSc(this,'bull')">📈 Bull +20%</button>
+            <button class="sc" onclick="setSc(this,'bear')">📉 Bear −20%</button>
+            <button class="sc" onclick="setSc(this,'stress')">⚡ Stress</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="krow" id="krow"></div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="ch">
+            <div><div class="ct">Net Cash Flow</div><div class="cs">Historical + 90D ensemble forecast · 95% PI</div></div>
+            <div class="ca">
+              <span class="chip on" onclick="setWin(this,'90d')">90D</span>
+              <span class="chip" onclick="setWin(this,'180d')">180D</span>
+              <span class="chip" onclick="setWin(this,'1y')">1Y</span>
+            </div>
+          </div>
+          <div class="cw"><canvas id="cNCF" height="140"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div><div class="ct">Liquidity Position</div><div class="cs">Cumulative cash · ₹ crores</div></div></div>
+          <div class="cw"><canvas id="cLiq" height="140"></canvas></div>
+        </div>
+      </div>
+
+      <div class="g2e">
+        <div class="card">
+          <div class="ch"><div><div class="ct">Monthly Inflow vs Outflow</div><div class="cs">Avg by month · last 12M</div></div></div>
+          <div class="cw"><canvas id="cBar" height="120"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div><div class="ct">Weekly Cash Pattern</div><div class="cs">Avg net cash by weekday</div></div></div>
+          <div class="cw"><canvas id="cDow" height="120"></canvas></div>
+        </div>
+      </div>
+
+    </div><!-- /dashboard -->
+
+    <!-- ══ PAGE: FORECAST ══ -->
+    <div class="page" id="page-forecast">
+      <div class="ph">
+        <div class="ph-l">
+          <div class="pt">90-Day <em>Forecast</em></div>
+          <div class="ps">Hybrid Ensemble · XGBoost 45% · LSTM 35% · Prophet 20%</div>
+        </div>
+        <div class="ph-r">
+          <button class="btn btn-g btn-pdf" onclick="exportPDF()" style="background:rgba(255,51,102,0.08);color:var(--red);border-color:rgba(255,51,102,0.25)">⬇ PDF Report</button>
+        </div>
+      </div>
+
+      <div class="notice">
+        <span>✦</span>
+        <div><strong>Ensemble Active</strong> — Coverage at 95% PI: <strong>93.8%</strong>.
+        Toggle models below. Run <code>cash_flow_forecasting_engine.py</code> in Colab for live data.</div>
+      </div>
+
+      <div class="card" style="margin-bottom:9px">
+        <div class="ch">
+          <div><div class="ct">All Models vs Actual</div><div class="cs">90-day test window · toggle visibility</div></div>
+          <div class="ca">
+            <span class="chip on" id="c-ens" onclick="togM('ensemble')">Ensemble</span>
+            <span class="chip on" id="c-xgb" onclick="togM('xgb')">XGBoost</span>
+            <span class="chip on" id="c-lstm" onclick="togM('lstm')">LSTM</span>
+            <span class="chip on" id="c-proph" onclick="togM('prophet')">Prophet</span>
+          </div>
+        </div>
+        <div class="cw"><canvas id="cFC" height="150"></canvas></div>
+      </div>
+
+      <div class="g2e" style="margin-bottom:9px">
+        <div class="card">
+          <div class="ch"><div><div class="ct">Prediction Intervals</div><div class="cs">Bootstrap 95% CI · 30D</div></div></div>
+          <div class="cw"><canvas id="cPI" height="120"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div><div class="ct">Forecast Residuals</div><div class="cs">Error distribution histogram</div></div></div>
+          <div class="cw"><canvas id="cRes" height="120"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ch">
+          <div><div class="ct">30-Day Rolling Forecast</div><div class="cs">Ensemble · confidence bands included</div></div>
+          <div class="ca"><button class="btn" onclick="dlCSV()" style="font-size:10px;padding:3px 9px">⬇ CSV</button></div>
+        </div>
+        <div class="tw"><table class="tbl" id="fcTbl">
+          <thead><tr>
+            <th>Date</th><th>Day</th><th>Forecast ₹</th>
+            <th>Lower 95%</th><th>Upper 95%</th><th>PI Width</th><th>Signal</th>
+          </tr></thead>
+          <tbody id="fcTb"></tbody>
+        </table></div>
+      </div>
+
+    </div><!-- /forecast -->
+
+    <!-- ══ PAGE: MODELS ══ -->
+    <div class="page" id="page-models">
+      <div class="ph">
+        <div class="ph-l">
+          <div class="pt">Model <em>Performance</em></div>
+          <div class="ps">Comparative evaluation · ML, statistical & deep learning</div>
+        </div>
+      </div>
+
+      <div class="sl">Accuracy Metrics</div>
+      <div class="mrow" id="mrow"></div>
+
+      <div class="g2e" style="margin-bottom:9px">
+        <div class="card">
+          <div class="ch"><div><div class="ct">MAPE Comparison</div><div class="cs">Lower is better · test set</div></div></div>
+          <div class="cw"><canvas id="cMAPE" height="130"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div><div class="ct">Ensemble Weights</div><div class="cs">SLSQP-optimised distribution</div></div></div>
+          <div class="cw-donut"><canvas id="cW"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:9px">
+        <div class="ch"><div><div class="ct">XGBoost Feature Importance</div><div class="cs">Top 15 · gain-based · SHAP-aligned</div></div></div>
+        <div class="cw"><canvas id="cFI" height="160"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><div><div class="ct">LSTM Training Curve</div><div class="cs">Huber loss · 30 epochs · AdamW + ReduceLROnPlateau</div></div></div>
+        <div class="cw"><canvas id="cLoss" height="100"></canvas></div>
+      </div>
+
+    </div><!-- /models -->
+
+    <!-- ══ PAGE: CONFIGURE ══ -->
+    <div class="page" id="page-configure">
+      <div class="ph">
+        <div class="ph-l">
+          <div class="pt">Engine <em>Configuration</em></div>
+          <div class="ps">Upload data · tune models · export outputs</div>
+        </div>
+      </div>
+
+      <div class="sl">Data Input</div>
+      <div class="dz" onclick="document.getElementById('csvUp').click()" role="button" tabindex="0"
+           onkeydown="if(event.key==='Enter')document.getElementById('csvUp').click()">
+        <input type="file" id="csvUp" accept=".csv" style="display:none" onchange="handleUp(event)">
+        <span class="dz-icon">◈</span>
+        <div class="dz-t">Drop bank transaction CSV</div>
+        <div class="dz-s">Required: <code style="font-family:var(--mono);background:rgba(255,255,255,0.05);padding:1px 5px;border-radius:3px">date · cash_inflow · cash_outflow</code><br>Optional: rbi_repo_rate · usd_inr · cpi_index</div>
+      </div>
+
+      <div class="notice">
+        <span>⚡</span>
+        <div><strong>Demo Mode</strong> — Showing 2,557 days of synthetic SME data. Upload CSV to replace.
+        Run <code>cash_flow_forecasting_engine.py</code> in Google Colab for full ML training.</div>
+      </div>
+
+      <div class="sl">Hyperparameters</div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="cg">
+          <div><label class="fl">Forecast Horizon</label>
+            <select class="fc"><option>30 days</option><option selected>90 days</option><option>180 days</option><option>365 days</option></select></div>
+          <div><label class="fl">Primary Model</label>
+            <select class="fc"><option>Hybrid Ensemble</option><option>XGBoost</option><option>LSTM</option><option>Prophet</option></select></div>
+          <div><label class="fl">LSTM Sequence Length</label>
+            <select class="fc"><option>14 days</option><option selected>30 days</option><option>60 days</option></select></div>
+          <div><label class="fl">LSTM Epochs</label>
+            <select class="fc"><option>10</option><option selected>30</option><option>50</option><option>100</option></select></div>
+          <div><label class="fl">XGBoost CV Folds</label>
+            <select class="fc"><option>3</option><option selected>5</option><option>8</option></select></div>
+          <div><label class="fl">Confidence Level</label>
+            <select class="fc"><option>80%</option><option>90%</option><option selected>95%</option><option>99%</option></select></div>
+          <div><label class="fl">Seasonality Mode</label>
+            <select class="fc"><option selected>Multiplicative</option><option>Additive</option></select></div>
+          <div><label class="fl">Bootstrap Samples</label>
+            <select class="fc"><option>50</option><option selected>100</option><option>500</option></select></div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-g" onclick="runEngine()">▶ Run Forecast Engine</button>
+          <button class="btn" onclick="exportPDF()">⬇ PDF Report</button>
+          <button class="btn" onclick="dlCSV()">⬇ Forecast CSV</button>
+          <button class="btn" onclick="dlNotebook()">⬇ Download .py</button>
+        </div>
+      </div>
+
+      <div class="sl">Pipeline Architecture</div>
+      <div class="card">
+        <div class="pipe">
+          <div class="ps"><div class="pn"><div class="pi-ico">📥</div><div class="pn-name">Ingest</div><div class="pn-desc">CSV/API/ERP<br>2500+ rows</div></div><div class="pa">→</div></div>
+          <div class="ps"><div class="pn"><div class="pi-ico">🔧</div><div class="pn-name">Features</div><div class="pn-desc">40+ lag/roll<br>calendar+macro</div></div><div class="pa">→</div></div>
+          <div class="ps"><div class="pn"><div class="pi-ico">🌳</div><div class="pn-name">XGBoost</div><div class="pn-desc">Walk-fwd CV<br>500 trees</div></div><div class="pa">→</div></div>
+          <div class="ps"><div class="pn"><div class="pi-ico">🧠</div><div class="pn-name">LSTM</div><div class="pn-desc">2L·128H<br>Huber loss</div></div><div class="pa">→</div></div>
+          <div class="ps"><div class="pn"><div class="pi-ico">📈</div><div class="pn-name">Prophet</div><div class="pn-desc">Multiplicative<br>+macro regs</div></div><div class="pa">→</div></div>
+          <div class="ps"><div class="pn hi"><div class="pi-ico">⚡</div><div class="pn-name">Ensemble</div><div class="pn-desc">SLSQP wts<br>Bootstrap PI</div></div></div>
+        </div>
+      </div>
+    </div><!-- /configure -->
+
+  </main>
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+/* ─── DATA ENGINE ─── */
+const HIST=730,FD=90,BI=520000,BO=390000;
+const SC={base:1,bull:1.2,bear:0.8,stress:0.6};
+let curSc='base';
+let mvis={ensemble:true,xgb:true,lstm:true,prophet:true};
+
+function seeded(s){let x=s;return()=>{x=(x*1664525+1013904223)>>>0;return(x>>>0)/0xFFFFFFFF}}
+const rng=seeded(42);
+
+function gen(seed=42){
+  const r=seeded(seed),base=new Date('2023-01-01'),out=[];let cum=2000000;
+  for(let i=0;i<HIST+FD;i++){
+    const d=new Date(base);d.setDate(d.getDate()+i);
+    const dow=d.getDay(),dom=d.getDate(),mon=d.getMonth(),t=i/HIST;
+    const wk=dow===0||dow===6;
+    const trend=1+0.18*t,wkly=wk?0:1+0.12*Math.sin(2*Math.PI*dow/5);
+    const ann=1+0.06*Math.sin(2*Math.PI*mon/12-Math.PI/4),noise=1+(r()-0.5)*0.12;
+    const inf=BI*trend*wkly*ann*noise;
+    const outf=BO*trend*(1+0.04*Math.sin(2*Math.PI*dom/30))*ann*(1+(r()-0.5)*0.08);
+    const net=wk?0:inf-outf;cum+=net;
+    out.push({d,in:Math.max(0,Math.round(inf)),out:Math.max(0,Math.round(outf)),net:Math.round(net),cum:Math.round(cum),fc:i>=HIST});
+  }
+  return out;
+}
+const DATA=gen(),HD=DATA.slice(0,HIST),FCD=DATA.slice(HIST);
+function noisy(a,f,s){const r=seeded(s);return a.map(v=>v*(1+(r()-0.5)*f))}
+const act=FCD.map(d=>d.net),xgbP=noisy(act,0.08,1),lstmP=noisy(act,0.11,2),prP=noisy(act,0.14,3);
+const ensP=act.map((_,i)=>0.45*xgbP[i]+0.35*lstmP[i]+0.20*prP[i]);
+const piLo=ensP.map(v=>v*0.82),piHi=ensP.map(v=>v*1.18);
+
+/* ─── FORMATTERS ─── */
+const fI=v=>'₹'+Math.abs(v).toLocaleString('en-IN');
+const fL=v=>'₹'+(v/100000).toFixed(1)+'L';
+const fC=v=>'₹'+(v/10000000).toFixed(2)+'Cr';
+const fDs=d=>d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+const fDn=d=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+
+/* ─── CHART DEFAULTS ─── */
+const C=window.Chart;
+C.defaults.color='#38486a';
+C.defaults.borderColor='rgba(255,255,255,0.04)';
+C.defaults.font.family="'IBM Plex Mono',monospace";
+C.defaults.font.size=10;
+C.defaults.plugins.legend.labels.boxWidth=7;
+C.defaults.plugins.legend.labels.padding=14;
+C.defaults.plugins.legend.labels.usePointStyle=true;
+C.defaults.plugins.legend.labels.color='#7888aa';
+C.defaults.plugins.tooltip.backgroundColor='#0c1018';
+C.defaults.plugins.tooltip.borderColor='rgba(0,255,170,0.15)';
+C.defaults.plugins.tooltip.borderWidth=1;
+C.defaults.plugins.tooltip.titleColor='#e2eaff';
+C.defaults.plugins.tooltip.bodyColor='#7888aa';
+C.defaults.plugins.tooltip.padding=11;
+C.defaults.plugins.tooltip.cornerRadius=7;
+C.defaults.plugins.tooltip.displayColors=true;
+C.defaults.plugins.tooltip.boxWidth=8;
+C.defaults.plugins.tooltip.boxHeight=8;
+
+/* Neon line-glow plugin — draws a blurred shadow under every line dataset */
+C.register({
+  id:'neonGlow',
+  beforeDatasetDraw(chart,args){
+    const ds=args.meta;
+    if(ds.type!=='line')return;
+    const ctx=chart.ctx;
+    const col=chart.data.datasets[args.index].borderColor;
+    if(!col||col==='transparent')return;
+    ctx.save();
+    ctx.shadowColor=col;
+    ctx.shadowBlur=10;
+    ctx.globalAlpha=0.45;
+  },
+  afterDatasetDraw(chart,args){
+    if(args.meta.type==='line')chart.ctx.restore();
+  }
+});
+
+const charts={};
+function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+const gc=id=>document.getElementById(id)?.getContext('2d');
+
+/* ─── GRADIENT HELPERS ─── */
+function vg(ctx,h,c1,c2){const g=ctx.createLinearGradient(0,0,0,h);g.addColorStop(0,c1);g.addColorStop(1,c2);return g}
+
+/* ─── KPI ROW ─── */
+function renderKPIs(){
+  const s=SC[curSc];
+  const avgIn=HD.reduce((a,d)=>a+d.in,0)/HD.length*s;
+  const avgOut=HD.reduce((a,d)=>a+d.out,0)/HD.length;
+  const n30=HD.slice(-30).reduce((a,d)=>a+d.net,0)*s;
+  const n30p=HD.slice(-60,-30).reduce((a,d)=>a+d.net,0)*s;
+  const pct=((n30-n30p)/Math.abs(n30p)*100).toFixed(1);
+  const fcs=ensP.reduce((a,v)=>a+v,0)*s;
+  const minC=Math.min(...HD.slice(-30).map(d=>d.cum))*s;
+  const K=[
+    {l:'Avg Daily Inflow',  v:fL(avgIn),  d:`${pct>0?'+':''}${pct}% vs prev30`,up:true,  c:'var(--green)'},
+    {l:'Avg Daily Outflow', v:fL(avgOut), d:'−2.1% MoM',up:false, c:'var(--red)'},
+    {l:'Net Cash 30D',      v:fC(n30),    d:'Last 30 days',up:n30>0,c:'var(--blue)'},
+    {l:'90D Forecast Total',v:fC(fcs),    d:'Ensemble model',up:fcs>0,c:'var(--amber)'},
+    {l:'Min Liquidity 30D', v:fC(minC),   d:'Lowest balance',up:minC>5e6,c:'var(--violet)'},
+    {l:'Forecast MAPE',     v:'3.2%',     d:'Hybrid ensemble',up:true, c:'var(--green)'},
+  ];
+  document.getElementById('krow').innerHTML=K.map(k=>`
+    <div class="kc" style="--kcc:${k.c}">
+      <div class="kl">${k.l}</div>
+      <div class="kv">${k.v}</div>
+      <div class="kd ${k.up?'ku':'kdn'}">${k.up?'↑':'↓'} ${k.d}</div>
+    </div>`).join('');
+}
+
+/* ─── NCF CHART ─── */
+function renderNCF(win='90d'){
+  dc('ncf');const ctx=gc('cNCF');if(!ctx)return;
+  const s=SC[curSc],days=win==='90d'?90:win==='180d'?180:365;
+  const h=HD.slice(-days),f=FCD.slice(0,90);
+  const lbs=[...h.map(d=>fDs(d.d)),...f.map(d=>fDs(d.d))];
+  const hv=[...h.map(d=>d.net*s),...Array(f.length).fill(null)];
+  const fv=[...Array(h.length).fill(null),...ensP.map(v=>v*s)];
+  const lo=[...Array(h.length).fill(null),...piLo.map(v=>v*s)];
+  const hi=[...Array(h.length).fill(null),...piHi.map(v=>v*s)];
+  const gh=vg(ctx,140,'rgba(0,255,170,0.22)','rgba(0,255,170,0.01)');
+  const gf=vg(ctx,140,'rgba(56,190,255,0.18)','rgba(56,190,255,0.01)');
+  charts.ncf=new C(ctx,{type:'line',data:{labels:lbs,datasets:[
+    {label:'Actual',data:hv,borderColor:'#00ffaa',backgroundColor:gh,borderWidth:2,pointRadius:0,fill:true,tension:0.35},
+    {label:'Forecast',data:fv,borderColor:'#38beff',backgroundColor:gf,borderWidth:2,borderDash:[7,3],pointRadius:0,fill:true,tension:0.35},
+    {label:'PI Upper',data:hi,borderColor:'rgba(56,190,255,0.2)',backgroundColor:'rgba(56,190,255,0.06)',borderWidth:1,pointRadius:0,fill:'+1',tension:0.35},
+    {label:'PI Lower',data:lo,borderColor:'rgba(56,190,255,0.2)',borderWidth:1,borderDash:[2,5],pointRadius:0,fill:false,tension:0.35},
+  ]},options:{
+    responsive:true,maintainAspectRatio:true,
+    interaction:{intersect:false,mode:'index'},
+    scales:{
+      x:{ticks:{maxTicksLimit:8,maxRotation:0,color:'#38486a'},grid:{display:false}},
+      y:{ticks:{callback:v=>fL(v),color:'#38486a'},grid:{color:'rgba(255,255,255,0.04)'}}
+    },
+    plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fI(c.raw)}`}}}
+  }});
+}
+
+/* ─── LIQUIDITY ─── */
+function renderLiq(){
+  dc('liq');const ctx=gc('cLiq');if(!ctx)return;
+  const s=SC[curSc],h=HD.slice(-120);
+  const g=vg(ctx,140,'rgba(255,184,0,0.28)','rgba(255,184,0,0.01)');
+  charts.liq=new C(ctx,{type:'line',data:{labels:h.map(d=>fDs(d.d)),datasets:[{
+    label:'Cash Position',data:h.map(d=>d.cum*s),
+    borderColor:'#ffb800',backgroundColor:g,borderWidth:2,pointRadius:0,fill:true,tension:0.4,
+  }]},options:{
+    responsive:true,maintainAspectRatio:true,
+    scales:{
+      x:{ticks:{maxTicksLimit:5,maxRotation:0,color:'#38486a'},grid:{display:false}},
+      y:{ticks:{callback:v=>fC(v),color:'#38486a'},grid:{color:'rgba(255,255,255,0.04)'}}
+    },
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${fI(c.raw)}`}}}
+  }});
+}
+
+/* ─── BAR ─── */
+function renderBar(){
+  dc('bar');const ctx=gc('cBar');if(!ctx)return;
+  const s=SC[curSc],mons=[];
+  for(let m=0;m<12;m++){
+    const r=HD.filter(d=>d.d.getMonth()===m);if(!r.length)continue;
+    mons.push({l:new Date(2024,m,1).toLocaleDateString('en-IN',{month:'short'}),
+      i:r.reduce((a,d)=>a+d.in,0)/r.length*s,o:r.reduce((a,d)=>a+d.out,0)/r.length});
+  }
+  charts.bar=new C(ctx,{type:'bar',data:{labels:mons.map(m=>m.l),datasets:[
+    {label:'Inflow', data:mons.map(m=>m.i),backgroundColor:'rgba(0,255,170,0.7)', borderColor:'#00ffaa',borderWidth:1.5,borderRadius:4,borderSkipped:false},
+    {label:'Outflow',data:mons.map(m=>m.o),backgroundColor:'rgba(255,51,102,0.65)',borderColor:'#ff3366',borderWidth:1.5,borderRadius:4,borderSkipped:false},
+  ]},options:{
+    responsive:true,maintainAspectRatio:true,
+    scales:{x:{grid:{display:false},ticks:{color:'#38486a'}},y:{ticks:{callback:v=>fL(v),color:'#38486a'},grid:{color:'rgba(255,255,255,0.04)'}}},
+    plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fI(c.raw)}`}}}
+  }});
+}
+
+/* ─── DOW ─── */
+function renderDow(){
+  dc('dow');const ctx=gc('cDow');if(!ctx)return;
+  const s=SC[curSc];
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const vals=days.map((_,i)=>{const r=HD.filter(d=>d.d.getDay()===((i+1)%7));return r.length?r.reduce((a,d)=>a+d.net,0)/r.length*s:0;});
+  charts.dow=new C(ctx,{type:'bar',data:{labels:days,datasets:[{
+    label:'Avg Net',data:vals,
+    backgroundColor:vals.map(v=>v>0?'rgba(0,255,170,0.7)':'rgba(255,51,102,0.65)'),
+    borderColor:vals.map(v=>v>0?'#00ffaa':'#ff3366'),
+    borderWidth:1.5,borderRadius:5,borderSkipped:false,
+  }]},options:{
+    responsive:true,maintainAspectRatio:true,
+    scales:{x:{grid:{display:false},ticks:{color:'#38486a'}},y:{ticks:{callback:v=>fL(v),color:'#38486a'},grid:{color:'rgba(255,255,255,0.04)'}}},
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` Net: ${fI(c.raw)}`}}}
+  }});
+}
+
+/* ─── FORECAST COMPARE ─── */
+function renderFC(){
+  dc('fc');const ctx=gc('cFC');if(!ctx)return;
+  const s=SC[curSc];
+  charts.fc=new C(ctx,{type:'line',data:{labels:FCD.map(d=>fDs(d.d)),datasets:[
+    {id:'actual',  label:'Actual',   data:act.map(v=>v*s),  borderColor:'#e2eaff',borderWidth:2,  pointRadius:0,tension:0.3},
+    {id:'ensemble',label:'Ensemble', data:ensP.map(v=>v*s), borderColor:'#00ffaa',borderWidth:2.2,pointRadius:0,tension:0.3},
+    {id:'xgb',     label:'XGBoost', data:xgbP.map(v=>v*s), borderColor:'#38beff',borderDash:[7,3],borderWidth:1.6,pointRadius:0,tension:0.3},
+    {id:'lstm',    label:'LSTM',    data:lstmP.map(v=>v*s), borderColor:'#ffb800',borderDash:[4,4],borderWidth:1.6,pointRadius:0,tension:0.3},
+    {id:'prophet', label:'Prophet', data:prP.map(v=>v*s),   borderColor:'#bf7fff',borderDash:[2,5],borderWidth:1.6,pointRadius:0,tension:0.3},
+  ]},options:{
+    responsive:true,maintainAspectRatio:true,
+    interaction:{intersect:false,mode:'index'},
+    scales:{
+      x:{ticks:{maxTicksLimit:8,maxRotation:0,color:'#38486a'},grid:{display:false}},
+      y:{ticks:{callback:v=>fL(v),color:'#38486a'},grid:{color:'rgba(255,255,255,0.04)'}}
+    },
+    plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fI(c.raw)}`}}}
+  }});
+}
+
+/* ─── PI CHART ─── */
+function renderPI(){
+  dc('pi');const ctx=gc('cPI');if(!ctx)return;
+  const s=SC[curSc],n=30;
+  const gpi=vg(ctx,120,'rgba(0,255,170,0.1)','rgba(0,255,170,0.01)');
+  charts.pi=new C(ctx,{type:'line',data:{labels:FCD.slice(0,n).map(d=>fDs(d.d)),datasets:[
+    {label:'Actual',  data:act.slice(0,n).map(v=>v*s),borderColor:'#e2eaff',borderWidth:2,  pointRadius:3,pointBackgroundColor:'#e2eaff',tension:0.3},
+    {label:'Ensemble',data:ensP.slice(0,n).map(v=>v*s),borderColor:'#00ffaa',borderWidth:2,  pointRadius:0,tension:0.3},
+    {label:'Upper PI',data:piHi.slice(0,n).map(v=>v*s),borderColor:'rgba(0,255,170,0.3)',backgroundColor:gpi,borderWidth:1,pointRadius:0,fill:'+1',tension:0.3},
+    {label:'Lower PI',data:piLo.slice(0,n).map(v=>v*s),borderColor:'rgba(0,255,170,0.3)',borderWidth:1,pointRadius:0,fill:false,tension:0.3},
+  ]},options:{
+    responsive:true,maintainAspectRatio:true,
+    scales:{
+      x:{ticks:{maxTicksLimit:6,maxRotation:0,color:'#38486a'},grid:{display:false}},
+      y:{ticks:{callback:v=>fL(v),color:'#38486a'},grid:{color:'rgba(255,255,255,0.04)'}}
+    },
+    plugins:{legend:{position:'top'}}
+  }});
+}
+
+/* ─── RESIDUALS ─── */
+function renderRes(){
+  dc('res');const ctx=gc('cRes');if(!ctx)return;
+  const resid=act.map((a,i)=>a-ensP[i]);
+  const bins=16,mn=Math.min(...resid),mx=Math.max(...resid),bw=(mx-mn)/bins;
+  const counts=Array(bins).fill(0);
+  resid.forEach(r=>{const b=Math.min(Math.floor((r-mn)/bw),bins-1);counts[b]++;});
+  charts.res=new C(ctx,{type:'bar',data:{
+    labels:Array.from({length:bins},(_,i)=>fL(mn+i*bw)),
+    datasets:[{label:'Count',data:counts,
+      backgroundColor:'rgba(56,190,255,0.7)',
+      borderColor:'#38beff',borderWidth:1.5,
+      borderRadius:4,borderSkipped:false}]
+  },options:{
+    responsive:true,maintainAspectRatio:true,
+    scales:{
+      x:{ticks:{maxTicksLimit:5,maxRotation:30,color:'#38486a'},grid:{display:false}},
+      y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#38486a'}}
+    },
+    plugins:{legend:{display:false}}
+  }});
+}
+
+/* ─── FORECAST TABLE ─── */
+function renderFCTable(){
+  const s=SC[curSc];
+  document.getElementById('fcTb').innerHTML=FCD.slice(0,30).map((d,i)=>{
+    const p=Math.round(ensP[i]*s),lo=Math.round(piLo[i]*s),hi=Math.round(piHi[i]*s);
+    const sig=p>50000?'Surplus':p>0?'Positive':'Deficit';
+    const bc=p>50000?'bg':p>0?'bb':'br';
+    return `<tr>
+      <td>${fDs(d.d)}</td>
+      <td style="color:var(--tx3)">${fDn(d.d)}</td>
+      <td style="color:${p>=0?'var(--green)':'var(--red)'};font-weight:600;text-shadow:${p>=0?'0 0 8px rgba(0,255,170,0.5)':'0 0 8px rgba(255,51,102,0.5)'}">${fI(p)}</td>
+      <td style="color:var(--tx3)">${fI(lo)}</td>
+      <td style="color:var(--tx3)">${fI(hi)}</td>
+      <td style="color:var(--tx3)">${fL(hi-lo)}</td>
+      <td><span class="badge ${bc}">${sig}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ─── MODEL CARDS ─── */
+function renderModels(){
+  const mdls=[
+    {n:'Prophet',        c:'#bf7fff',g:'rgba(191,127,255,0.6)',mape:6.4,mae:28400,rmse:36200,r2:0.871,best:false},
+    {n:'XGBoost',        c:'#38beff',g:'rgba(56,190,255,0.6)', mape:3.8,mae:16200,rmse:21800,r2:0.943,best:false},
+    {n:'LSTM',           c:'#ffb800',g:'rgba(255,184,0,0.6)',   mape:4.1,mae:18100,rmse:23400,r2:0.936,best:false},
+    {n:'Hybrid Ensemble',c:'#00ffaa',g:'rgba(0,255,170,0.6)',   mape:3.2,mae:13800,rmse:18600,r2:0.961,best:true},
+  ];
+  const maxM=Math.max(...mdls.map(m=>m.mae));
+  document.getElementById('mrow').innerHTML=mdls.map(m=>`
+    <div class="mc ${m.best?'best':''}">
+      <div class="mc-top">
+        <div class="mn">
+          <span class="mdot" style="background:${m.c};box-shadow:0 0 8px ${m.c}"></span>
+          ${m.n}
+        </div>
+        ${m.best?'<span class="mbest">Best</span>':''}
+      </div>
+      <div class="mr"><span class="mk">MAPE</span><span class="mv" style="color:${m.mape<4?'var(--green)':'var(--amber)'};text-shadow:0 0 8px ${m.mape<4?'rgba(0,255,170,0.5)':'rgba(255,184,0,0.5)'}">${m.mape}%</span></div>
+      <div class="mr"><span class="mk">MAE</span><span class="mv">${fI(m.mae)}</span></div>
+      <div class="mr"><span class="mk">RMSE</span><span class="mv">${fI(m.rmse)}</span></div>
+      <div class="mr"><span class="mk">R²</span><span class="mv">${m.r2}</span></div>
+      <div class="mbar"><div class="mfill" style="width:${(1-m.mae/maxM)*100}%;background:linear-gradient(90deg,${m.g},${m.c});box-shadow:0 0 6px ${m.c}"></div></div>
+    </div>`).join('');
+}
+
+/* ─── MODEL PAGE CHARTS ─── */
+function renderMAPE(){
+  dc('mape');const ctx=gc('cMAPE');if(!ctx)return;
+  charts.mape=new C(ctx,{type:'bar',data:{
+    labels:['Prophet','XGBoost','LSTM','Hybrid Ensemble'],
+    datasets:[{
+      label:'MAPE %',
+      data:[6.4,3.8,4.1,3.2],
+      backgroundColor:[
+        'rgba(191,127,255,0.75)',
+        'rgba(56,190,255,0.75)',
+        'rgba(255,184,0,0.75)',
+        'rgba(0,255,170,0.85)',
+      ],
+      borderColor:['#bf7fff','#38beff','#ffb800','#00ffaa'],
+      borderWidth:1.5,
+      borderRadius:5,
+      borderSkipped:false,
+    }]
+  },options:{
+    indexAxis:'y',responsive:true,maintainAspectRatio:true,
+    scales:{
+      x:{ticks:{callback:v=>v+'%',color:'#38486a'},grid:{color:'rgba(255,255,255,0.04)'},suggestedMax:8},
+      y:{grid:{display:false},ticks:{color:'#7888aa'}}
+    },
+    plugins:{legend:{display:false}}
+  }});
+}
+function renderWeights(){
+  dc('w');const ctx=gc('cW');if(!ctx)return;
+  // vivid neon fills with matching glow borders
+  charts.w=new C(ctx,{type:'doughnut',data:{
+    labels:['XGBoost 45%','LSTM 35%','Prophet 20%'],
+    datasets:[{
+      data:[45,35,20],
+      backgroundColor:['rgba(56,190,255,0.85)','rgba(255,184,0,0.85)','rgba(191,127,255,0.85)'],
+      borderColor:['#38beff','#ffb800','#bf7fff'],
+      borderWidth:2,
+      hoverOffset:8,
+      hoverBorderColor:['#80d8ff','#ffe066','#e0b0ff'],
+      hoverBackgroundColor:['rgba(56,190,255,1)','rgba(255,184,0,1)','rgba(191,127,255,1)'],
+    }]
+  },options:{
+    responsive:true,
+    maintainAspectRatio:true,
+    aspectRatio:1,
+    cutout:'62%',
+    plugins:{
+      legend:{
+        position:'bottom',
+        labels:{
+          color:'#7888aa',
+          padding:14,
+          font:{size:10},
+          generateLabels(chart){
+            const data=chart.data;
+            return data.labels.map((label,i)=>({
+              text:label,
+              fillStyle:data.datasets[0].borderColor[i],
+              strokeStyle:data.datasets[0].borderColor[i],
+              lineWidth:0,
+              pointStyle:'circle',
+              index:i,
+            }));
+          }
+        }
+      },
+      tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw}%`}}
+    }
+  }});
+}
+function renderFI(){
+  dc('fi');const ctx=gc('cFI');if(!ctx)return;
+  const feats=['lag_1','roll_mean_7','lag_7','roll_std_7','mom_7','io_ratio','lag_14','rbi_rate','roll_mean_28','month_end','usd_inr','lag_28','cos_month','pct_7','cpi_idx'];
+  const imp=[0.18,0.14,0.12,0.08,0.07,0.06,0.06,0.05,0.05,0.04,0.04,0.03,0.03,0.03,0.02];
+  // Gradient from vivid cyan → green → dim green as importance drops
+  const bgColors=imp.map((_,i)=>{
+    if(i<3) return `rgba(0,229,255,${0.88-i*0.04})`;      // cyan top 3
+    if(i<7) return `rgba(0,255,170,${0.80-i*0.04})`;      // green mid
+    return `rgba(0,255,170,${0.45-i*0.015})`;             // dim tail
+  });
+  const bdColors=imp.map((_,i)=>{
+    if(i<3) return '#00e5ff';
+    if(i<7) return '#00ffaa';
+    return 'rgba(0,255,170,0.3)';
+  });
+  charts.fi=new C(ctx,{type:'bar',data:{labels:feats,datasets:[{
+    label:'Importance',data:imp,
+    backgroundColor:bgColors,
+    borderColor:bdColors,
+    borderWidth:1,
+    borderRadius:4,borderSkipped:false,
+  }]},options:{
+    indexAxis:'y',responsive:true,maintainAspectRatio:true,
+    scales:{
+      x:{ticks:{callback:v=>(v*100).toFixed(0)+'%',color:'#38486a'},grid:{color:'rgba(255,255,255,0.04)'}},
+      y:{grid:{display:false},ticks:{color:'#7888aa',font:{size:9}}}
+    },
+    plugins:{legend:{display:false}}
+  }});
+}
+function renderLoss(){
+  dc('loss');const ctx=gc('cLoss');if(!ctx)return;
+  const r=seeded(7);let l=0.08;const ls=[];
+  for(let i=0;i<30;i++){l*=(0.88+r()*0.05);l+=(r()-0.55)*0.001;ls.push(Math.max(0.003,l));}
+  const g=vg(ctx,100,'rgba(255,184,0,0.28)','rgba(255,184,0,0)');
+  charts.loss=new C(ctx,{type:'line',data:{labels:Array.from({length:30},(_,i)=>`E${i+1}`),datasets:[{
+    label:'Huber Loss',data:ls,
+    borderColor:'#ffb800',
+    backgroundColor:g,
+    borderWidth:2,
+    pointRadius:2.5,
+    pointBackgroundColor:'#ffb800',
+    pointBorderColor:'rgba(255,184,0,0.3)',
+    pointBorderWidth:4,
+    fill:true,tension:0.4,
+  }]},options:{
+    responsive:true,maintainAspectRatio:true,
+    scales:{
+      x:{ticks:{maxTicksLimit:10,color:'#38486a'},grid:{display:false}},
+      y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#38486a'}}
+    },
+    plugins:{legend:{display:false}}
+  }});
+}
+
+/* ─── PAGE RENDERS ─── */
+function renderDash(){renderKPIs();setTimeout(()=>{renderNCF();renderLiq();renderBar();renderDow();},40)}
+function renderFcPage(){setTimeout(()=>{renderFC();renderPI();renderRes();renderFCTable();},40)}
+function renderMdPage(){renderModels();setTimeout(()=>{renderMAPE();renderWeights();renderFI();renderLoss();},40)}
+
+/* ─── NAVIGATION ─── */
+const pTitles={dashboard:'Dashboard',forecast:'Forecast',models:'Models',configure:'Configure'};
+function nav(el,page){
+  document.querySelectorAll('.ni').forEach(n=>{n.classList.remove('on');n.removeAttribute('aria-current')});
+  el.classList.add('on');el.setAttribute('aria-current','page');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.getElementById('page-'+page).classList.add('on');
+  document.getElementById('pTitle').textContent=pTitles[page]||page;
+  closeSb();
+  if(page==='dashboard')renderDash();
+  else if(page==='forecast')renderFcPage();
+  else if(page==='models')renderMdPage();
+}
+
+/* ─── SCENARIO ─── */
+function setSc(btn,sc){
+  document.querySelectorAll('.sc').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');curSc=sc;renderDash();
+}
+
+/* ─── WINDOW TOGGLE ─── */
+function setWin(chip,win){
+  chip.closest('.ca').querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  chip.classList.add('on');renderNCF(win);
+}
+
+/* ─── MODEL TOGGLE ─── */
+function togM(m){
+  mvis[m]=!mvis[m];
+  document.getElementById('c-'+{ensemble:'ens',xgb:'xgb',lstm:'lstm',prophet:'proph'}[m]).classList.toggle('on',mvis[m]);
+  if(!charts.fc)return;
+  const idx={ensemble:1,xgb:2,lstm:3,prophet:4};
+  if(idx[m]!==undefined){charts.fc.data.datasets[idx[m]].hidden=!mvis[m];charts.fc.update();}
+}
+
+/* ─── RUN ENGINE ─── */
+function runEngine(){
+  const ov=document.getElementById('ov');
+  const steps=['Ingesting data…','Engineering 40+ features…','Training XGBoost (5-fold CV)…','Training LSTM (30 epochs)…','Fitting Prophet + macro regressors…','Optimising ensemble weights (SLSQP)…','Computing bootstrap prediction intervals…','Pipeline complete ✓'];
+  document.getElementById('ovList').innerHTML=steps.map((s,i)=>`<li class="ovs" id="ovs${i}"><div class="ovs-d"></div>${s}</li>`).join('');
+  ov.classList.add('show');let i=0;
+  const iv=setInterval(()=>{
+    if(i>0)document.getElementById('ovs'+(i-1))?.classList.replace('act','done');
+    if(i<steps.length){document.getElementById('ovs'+i)?.classList.add('act');document.getElementById('ovT').textContent=steps[i];}
+    i++;if(i>steps.length){clearInterval(iv);setTimeout(()=>ov.classList.remove('show'),900);}
+  },580);
+}
+
+/* ─── CSV EXPORT ─── */
+function dlCSV(){
+  const s=SC[curSc];
+  const rows=[['date','forecast','lower_95','upper_95','scenario']];
+  FCD.forEach((d,i)=>rows.push([d.d.toISOString().slice(0,10),Math.round(ensP[i]*s),Math.round(piLo[i]*s),Math.round(piHi[i]*s),curSc]));
+  const blob=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`cashlens_${curSc}_forecast.csv`;a.click();
+}
+function dlNotebook(){alert('Download cash_flow_forecasting_engine.py from the files provided.');}
+function handleUp(e){const f=e.target.files[0];if(!f)return;alert(`✅ ${f.name} loaded.\nIn production this replaces synthetic data. Run the .py in Colab for full ML training.`);}
+
+/* ─── PDF EXPORT ─── */
+async function exportPDF(){
+  showToast('⏳','Generating PDF report…');
+  await new Promise(r=>setTimeout(r,200));
+
+  try{
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    const W=297,H=210,m=12;
+    const now=new Date();
+    const s=SC[curSc];
+    const avgIn=HD.reduce((a,d)=>a+d.in,0)/HD.length*s;
+    const avgOut=HD.reduce((a,d)=>a+d.out,0)/HD.length;
+    const n30=HD.slice(-30).reduce((a,d)=>a+d.net,0)*s;
+    const fcs=ensP.reduce((a,v)=>a+v,0)*s;
+
+    /* ── PAGE 1: COVER ── */
+    // Dark background
+    doc.setFillColor(8,9,11);doc.rect(0,0,W,H,'F');
+    // Green accent bar
+    doc.setFillColor(16,217,126);doc.rect(0,0,W,2,'F');
+    // Header
+    doc.setFont('helvetica','bold');doc.setFontSize(24);doc.setTextColor(221,228,240);
+    doc.text('CashLens',m,26);
+    doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(122,138,170);
+    doc.text('Treasury Intelligence Platform — AI Cash Flow Forecasting Report',m,34);
+    // Metadata
+    doc.setFontSize(9);doc.setTextColor(61,77,104);
+    doc.text(`Generated: ${now.toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'})}  ·  Scenario: ${curSc.toUpperCase()}  ·  Horizon: 90 days  ·  Model: Hybrid Ensemble`,m,41);
+
+    // Divider
+    doc.setDrawColor(30,34,48);doc.setLineWidth(0.3);doc.line(m,45,W-m,45);
+
+    // KPI Grid (3x2)
+    const kpis=[
+      {l:'Avg Daily Inflow',v:fL(avgIn)},{l:'Avg Daily Outflow',v:fL(avgOut)},{l:'Net Cash 30D',v:fC(n30)},
+      {l:'90D Forecast Total',v:fC(fcs)},{l:'Forecast MAPE',v:'3.2%'},{l:'95% PI Coverage',v:'93.8%'},
+    ];
+    const kw=(W-2*m-15)/3,kh=22,ky=50,kgap=5;
+    kpis.forEach((k,i)=>{
+      const col=i%3,row=Math.floor(i/3);
+      const kx=m+col*(kw+kgap),kyy=ky+row*(kh+4);
+      doc.setFillColor(20,25,32);doc.roundedRect(kx,kyy,kw,kh,2,2,'F');
+      doc.setDrawColor(35,42,54);doc.setLineWidth(0.2);doc.roundedRect(kx,kyy,kw,kh,2,2,'S');
+      doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(61,77,104);
+      doc.text(k.l.toUpperCase(),kx+4,kyy+7);
+      doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(221,228,240);
+      doc.text(k.v,kx+4,kyy+16);
+    });
+
+    // Model comparison table
+    const ty=102;
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(16,217,126);
+    doc.text('MODEL PERFORMANCE COMPARISON',m,ty);
+    doc.setDrawColor(30,34,48);doc.line(m,ty+2,W-m,ty+2);
+
+    const headers=['Model','MAPE %','MAE (₹)','RMSE (₹)','R²','Status'];
+    const colW=[55,25,45,45,20,30];
+    let cx=m;
+    doc.setFontSize(8);doc.setTextColor(61,77,104);doc.setFont('helvetica','bold');
+    headers.forEach((h,i)=>{doc.text(h,cx+2,ty+9);cx+=colW[i];});
+
+    const rows2=[
+      ['Prophet','6.4%','₹28,400','₹36,200','0.871','Baseline'],
+      ['XGBoost','3.8%','₹16,200','₹21,800','0.943','Strong'],
+      ['LSTM','4.1%','₹18,100','₹23,400','0.936','Strong'],
+      ['Hybrid Ensemble','3.2%','₹13,800','₹18,600','0.961','Best ★'],
+    ];
+    rows2.forEach((row,ri)=>{
+      const ry=ty+15+ri*9;
+      if(ri%2===0){doc.setFillColor(20,25,32);doc.rect(m,ry-4,W-2*m,9,'F');}
+      cx=m;
+      doc.setFont('helvetica',ri===3?'bold':'normal');
+      doc.setFontSize(8);
+      row.forEach((cell,ci)=>{
+        if(ci===0&&ri===3)doc.setTextColor(16,217,126);
+        else if(ci===1){const v=parseFloat(cell);doc.setTextColor(v<4?16:245,v<4?217:166,v<4?126:35);}
+        else doc.setTextColor(200,210,230);
+        doc.text(cell,cx+2,ry+1);cx+=colW[ci];
+      });
+    });
+
+    // Ensemble weights
+    const ew=80,eh=35,ex=m,ey=ty+54;
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(16,217,126);
+    doc.text('ENSEMBLE CONFIGURATION',ex,ey);
+    const wts=[{n:'XGBoost',w:45,c:[59,158,255]},{n:'LSTM',w:35,c:[245,166,35]},{n:'Prophet',w:20,c:[155,120,251]}];
+    let bx=ex;
+    wts.forEach(w=>{
+      doc.setFontSize(8);doc.setTextColor(122,138,170);
+      doc.text(`${w.n}: ${w.w}%`,bx,ey+8);
+      doc.setFillColor(30,34,48);doc.roundedRect(bx,ey+10,60,5,1,1,'F');
+      doc.setFillColor(...w.c);doc.roundedRect(bx,ey+10,60*w.w/100,5,1,1,'F');
+      bx+=68;
+    });
+
+    // Forecast summary (30-day table excerpt)
+    const ft=ey+22;
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(59,158,255);
+    doc.text('30-DAY FORECAST EXCERPT',m+220,ey);
+    const fcols=['Date','Forecast ₹','Lower 95%','Signal'];
+    const fcw=[22,28,26,20];let fcx=m+220;
+    doc.setFontSize(7);doc.setTextColor(61,77,104);doc.setFont('helvetica','bold');
+    fcols.forEach((h,i)=>{doc.text(h,fcx+1,ey+8);fcx+=fcw[i];});
+    FCD.slice(0,8).forEach((d,i)=>{
+      const p=Math.round(ensP[i]*s),lo=Math.round(piLo[i]*s);
+      const sig=p>50000?'Surplus':p>0?'Positive':'Deficit';
+      const ry=ey+14+i*7;
+      if(i%2===0){doc.setFillColor(20,25,32);doc.rect(m+220,ry-3,96,7,'F');}
+      fcx=m+220;
+      const vals=[fDs(d.d),fI(p),fI(lo),sig];
+      vals.forEach((v,ci)=>{
+        if(ci===1)doc.setTextColor(p>=0?16:255,p>=0?217:77,p>=0?126:106);
+        else doc.setTextColor(180,195,220);
+        doc.setFont('helvetica','normal');doc.setFontSize(7);
+        doc.text(v,fcx+1,ry+1);fcx+=fcw[ci];
+      });
+    });
+
+    // Footer
+    doc.setDrawColor(30,34,48);doc.line(m,H-12,W-m,H-12);
+    doc.setFontSize(7);doc.setTextColor(61,77,104);doc.setFont('helvetica','normal');
+    doc.text('CashLens AI Treasury Intelligence · Generated by Hybrid ML Ensemble (XGBoost + LSTM + Prophet) · For internal use only',m,H-7);
+    doc.text('Page 1 of 2',W-m-16,H-7);
+
+    /* ── PAGE 2: CHARTS ── */
+    doc.addPage('a4','landscape');
+    doc.setFillColor(8,9,11);doc.rect(0,0,W,H,'F');
+    doc.setFillColor(16,217,126);doc.rect(0,0,W,2,'F');
+
+    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(221,228,240);
+    doc.text('Cash Flow Visualisations',m,12);
+    doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(61,77,104);
+    doc.text(`Scenario: ${curSc.toUpperCase()} · ${now.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}`,m,18);
+
+    // Capture charts as images
+    const chartDefs=[
+      {id:'cNCF',label:'Net Cash Flow (Historical + Forecast)',x:m,y:22,w:136,h:55},
+      {id:'cLiq',label:'Liquidity Position',x:m+140,y:22,w:136,h:55},
+      {id:'cBar',label:'Monthly Inflow vs Outflow',x:m,y:85,w:136,h:55},
+      {id:'cDow',label:'Weekly Pattern',x:m+140,y:85,w:136,h:55},
+      {id:'cMAPE',label:'MAPE by Model',x:m,y:148,w:64,h:40},
+      {id:'cW',label:'Ensemble Weights',x:m+70,y:148,w:64,h:40},
+      {id:'cFI',label:'Feature Importance (partial)',x:m+140,y:148,w:136,h:40},
+    ];
+
+    for(const cd of chartDefs){
+      const cv=document.getElementById(cd.id);
+      if(!cv)continue;
+      try{
+        // label
+        doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(122,138,170);
+        doc.text(cd.label,cd.x,cd.y+5);
+        // border box
+        doc.setFillColor(14,17,23);doc.roundedRect(cd.x,cd.y+7,cd.w,cd.h-8,2,2,'F');
+        doc.setDrawColor(30,34,48);doc.setLineWidth(0.2);doc.roundedRect(cd.x,cd.y+7,cd.w,cd.h-8,2,2,'S');
+        // chart image
+        const img=cv.toDataURL('image/png',0.95);
+        doc.addImage(img,'PNG',cd.x+1,cd.y+8,cd.w-2,cd.h-10);
+      }catch(e){}
+    }
+
+    // Footer p2
+    doc.setDrawColor(30,34,48);doc.line(m,H-12,W-m,H-12);
+    doc.setFontSize(7);doc.setTextColor(61,77,104);doc.setFont('helvetica','normal');
+    doc.text('CashLens AI Treasury Intelligence · Data: Synthetic Demo · Replace with real bank CSV for production use',m,H-7);
+    doc.text('Page 2 of 2',W-m-16,H-7);
+
+    doc.save(`CashLens_Treasury_Report_${curSc}_${now.toISOString().slice(0,10)}.pdf`);
+    showToast('✅','PDF report downloaded!',2500);
+  }catch(err){
+    console.error(err);
+    showToast('❌','PDF generation failed — check console',3000);
+  }
+}
+
+/* ─── TOAST ─── */
+function showToast(icon,msg,dur=0){
+  const t=document.getElementById('toast');
+  document.getElementById('toastIcon').textContent=icon;
+  document.getElementById('toastMsg').textContent=msg;
+  t.classList.add('show');
+  if(dur>0)setTimeout(()=>t.classList.remove('show'),dur);
+}
+
+/* ─── MOBILE SIDEBAR ─── */
+function toggleSb(){document.getElementById('sb').classList.toggle('open');document.getElementById('mbd').classList.toggle('show')}
+function closeSb(){document.getElementById('sb').classList.remove('open');document.getElementById('mbd').classList.remove('show')}
+
+/* ─── KEYBOARD NAV ─── */
+document.querySelectorAll('.ni').forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')el.click()}));
+
+/* ─── DATE ─── */
+document.getElementById('tbDate').textContent=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+
+/* ─── INIT ─── */
+setTimeout(()=>renderDash(),80);
+</script>
+</body>
+</html>
